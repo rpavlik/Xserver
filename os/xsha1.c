@@ -5,6 +5,10 @@
 #include "os.h"
 #include "xsha1.h"
 
+#ifdef __MINGW32__
+#include <X11/Xwinsock.h>
+#endif
+
 #if defined(HAVE_SHA1_IN_LIBMD)  /* Use libmd for SHA1 */ \
 	|| defined(HAVE_SHA1_IN_LIBC) /* Use libc for SHA1 */
 
