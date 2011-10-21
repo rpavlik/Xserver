@@ -240,8 +240,10 @@ OsInit(void)
 #endif
 	}
 
+#ifndef __MINGW32__
 	if (getpgrp () == 0)
 	    setpgid (0, 0);
+#endif
 
 #ifdef RLIMIT_DATA
 	if (limitDataSpace >= 0)
