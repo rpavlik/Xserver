@@ -495,7 +495,7 @@ AdjustWaitForDelay (pointer waitTime, unsigned long newdelay)
 
 void UseMsg(void)
 {
-    ErrorF("use: X [:<display>] [option]\n");
+    ErrorF("use: Xwin [:<display>] [option]\n");
     ErrorF("-a #                   default pointer acceleration (factor)\n");
     ErrorF("-ac                    disable access control restrictions\n");
     ErrorF("-audit int             set audit trail level\n");	
