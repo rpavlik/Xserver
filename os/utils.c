@@ -67,7 +67,10 @@ __stdcall unsigned long GetTickCount(void);
 #include <X11/Xos.h>
 #include <stdio.h>
 #include <time.h>
-#if defined(WIN32) && !defined(__CYGWIN__)
+#ifdef __MINGW32__
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif
 #include <X11/Xwinsock.h>
 #include <ws2tcpip.h>
 #else
