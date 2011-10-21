@@ -551,7 +551,11 @@ void UseMsg(void)
     ErrorF("+xinerama              Enable XINERAMA extension\n");
     ErrorF("-xinerama              Disable XINERAMA extension\n");
 #endif
+#ifdef __MINGW32__
+    ErrorF("-smartSched            Enable EXPERIMENTAL smart scheduling\n");
+#else
     ErrorF("-dumbSched             Disable smart scheduling, enable old behavior\n");
+#endif
     ErrorF("-schedInterval int     Set scheduler interval in msec\n");
     ErrorF("-sigstop               Enable SIGSTOP based startup\n");
     ErrorF("+extension name        Enable extension\n");
@@ -910,10 +914,17 @@ ProcessCommandLine(int argc, char *argv[])
 	    i = skip - 1;
 	}
 #endif
+#ifdef __MINGW32__
+	else if ( strcmp( argv[i], "-smartSched") == 0)
+	{
+	    SmartScheduleDisable = FALSE;
+	}
+#else
 	else if ( strcmp( argv[i], "-dumbSched") == 0)
 	{
 	    SmartScheduleDisable = TRUE;
 	}
+#endif
 	else if ( strcmp( argv[i], "-schedInterval") == 0)
 	{
 	    if (++i < argc)
