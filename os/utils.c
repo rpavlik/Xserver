@@ -132,7 +132,11 @@ __stdcall unsigned long GetTickCount(void);
 
 Bool noTestExtensions;
 #ifdef COMPOSITE
+#ifdef __MINGW32__
+Bool noCompositeExtension = TRUE;
+#else
 Bool noCompositeExtension = FALSE;
+#endif
 #endif
 
 #ifdef DAMAGE
