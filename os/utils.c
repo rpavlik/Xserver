@@ -246,6 +246,10 @@ OsSignal(int sig, OsSigHandlerPtr handler)
 #define LOCK_PREFIX "/.X"
 #define LOCK_SUFFIX "-lock"
 
+#ifdef __MINGW32__
+/* work around function in winbase.h */
+#define LockFile XLockFile
+#endif
 static Bool StillLocking = FALSE;
 static char LockFile[PATH_MAX];
 static Bool nolock = FALSE;
