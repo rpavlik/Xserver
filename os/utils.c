@@ -249,13 +249,16 @@ OsSignal(int sig, OsSigHandlerPtr handler)
 #define LOCK_PREFIX "/.X"
 #define LOCK_SUFFIX "-lock"
 
+static Bool nolock = FALSE;
+
+#ifdef SERVER_LOCK
 #ifdef __MINGW32__
 /* work around function in winbase.h */
 #define LockFile XLockFile
 #endif
 static Bool StillLocking = FALSE;
 static char LockFile[PATH_MAX];
-static Bool nolock = FALSE;
+
 
 /*
  * LockServer --
@@ -399,6 +402,7 @@ UnlockServer(void)
   (void) unlink(LockFile);
   }
 }
+#endif /* SERVER_LOCK */
 
 /* Force connections to close on SIGHUP from init */
 
