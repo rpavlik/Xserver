@@ -63,20 +63,25 @@ OR PERFORMANCE OF THIS SOFTWARE.
 __stdcall unsigned long GetTickCount(void);
 #endif
 
-#if defined(WIN32) && !defined(__CYGWIN__)
-#include <X11/Xwinsock.h>
-#endif
+
 #include <X11/Xos.h>
 #include <stdio.h>
 #include <time.h>
-#if !defined(WIN32) || !defined(__MINGW32__)
+#if defined(WIN32) && !defined(__CYGWIN__)
+#include <X11/Xwinsock.h>
+#include <ws2tcpip.h>
+#else
 #include <sys/time.h>
 #include <sys/resource.h>
 #endif
 #include "misc.h"
 #include <X11/X.h>
+#ifndef XSERV_t
 #define XSERV_t
+#endif
+#ifndef TRANS_SERVER
 #define TRANS_SERVER
+#endif
 #define TRANS_REOPEN
 #include <X11/Xtrans/Xtrans.h>
 #include "input.h"
@@ -208,6 +213,9 @@ int auditTrailLevel = 1;
 OsSigHandlerPtr
 OsSignal(int sig, OsSigHandlerPtr handler)
 {
+#if defined(WIN32) && defined(__MINGW32__)
+    return signal(sig, handler);
+#else
     struct sigaction act, oact;
 
     sigemptyset(&act.sa_mask);
@@ -218,6 +226,7 @@ OsSignal(int sig, OsSigHandlerPtr handler)
     if (sigaction(sig, &act, &oact))
       perror("sigaction");
     return oact.sa_handler;
+#endif
 }
 
 /*
