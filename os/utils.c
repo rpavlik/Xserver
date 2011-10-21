@@ -206,6 +206,12 @@ Bool PanoramiXExtensionDisabledHack = FALSE;
 
 int auditTrailLevel = 1;
 
+#ifdef __MINGW32__
+static HANDLE s_hSmartScheduleTimer = NULL;
+static HANDLE s_hSmartScheduleTimerQueue = NULL;
+static VOID CALLBACK SmartScheduleTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired);
+#endif
+
 #if defined(SVR4) || defined(__linux__) || defined(CSRG_BASED)
 #define HAS_SAVED_IDS_AND_SETEUID
 #endif
@@ -1131,6 +1137,12 @@ XNFstrdup(const char *s)
 void
 SmartScheduleStopTimer (void)
 {
+#ifdef __MINGW32__
+    if (SmartScheduleDisable)
+        return;
+    DeleteTimerQueueTimer(s_hSmartScheduleTimerQueue, s_hSmartScheduleTimer, NULL);
+    s_hSmartScheduleTimer = NULL;
+#else
     struct itimerval	timer;
     
     if (SmartScheduleDisable)
@@ -1140,11 +1152,24 @@ SmartScheduleStopTimer (void)
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_usec = 0;
     (void) setitimer (ITIMER_REAL, &timer, 0);
+#endif
 }
 
 void
 SmartScheduleStartTimer (void)
 {
+#ifdef __MINGW32__
+    if (SmartScheduleDisable)
+        return;
+    if (!CreateTimerQueueTimer(&s_hSmartScheduleTimer, s_hSmartScheduleTimerQueue, SmartScheduleTimer, NULL,
+                               SmartScheduleInterval, SmartScheduleInterval, WT_EXECUTEINPERSISTENTTHREAD))
+    {
+        ErrorF("SmartScheduleStartTimer - CreateTimerQueueTimer() failed, smart scheduling disabled: %08x\n", (unsigned int)GetLastError());
+        CloseHandle(s_hSmartScheduleTimer);
+        SmartScheduleDisable = TRUE;
+        return;
+    }
+#else
     struct itimerval	timer;
     
     if (SmartScheduleDisable)
@@ -1154,10 +1179,15 @@ SmartScheduleStartTimer (void)
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_usec = SmartScheduleInterval * 1000;
     setitimer (ITIMER_REAL, &timer, 0);
+#endif
 }
 
+#ifdef __MINGW32__
+static VOID CALLBACK SmartScheduleTimer(PVOID lpParameter, BOOLEAN TimerOrWaitFired)
+#else
 static void
 SmartScheduleTimer (int sig)
+#endif
 {
     SmartScheduleTime += SmartScheduleInterval;
 }
@@ -1165,6 +1195,16 @@ SmartScheduleTimer (int sig)
 void
 SmartScheduleInit (void)
 {
+#ifdef __MINGW32__
+    if (SmartScheduleDisable)
+        return;
+    s_hSmartScheduleTimerQueue = CreateTimerQueue();
+    if (!s_hSmartScheduleTimerQueue)
+    {
+        ErrorF("SmartScheduleInit - CreateTimerQueue() failed, smart scheduling disabled: %08x\n", (unsigned int)GetLastError());
+        SmartScheduleDisable = TRUE;
+    }
+#else
     struct sigaction	act;
 
     if (SmartScheduleDisable)
@@ -1181,6 +1221,7 @@ SmartScheduleInit (void)
 	perror ("sigaction for smart scheduler");
 	SmartScheduleDisable = TRUE;
     }
+#endif
 }
 
 #ifdef SIG_BLOCK
