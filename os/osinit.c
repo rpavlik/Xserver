@@ -290,7 +290,9 @@ OsInit(void)
 	    }
 	}
 #endif
+#ifdef LOCK_SERVER
 	LockServer();
+#endif
 	been_here = TRUE;
     }
     TimerInit();
@@ -308,6 +310,8 @@ OsCleanup(Bool terminating)
 {
     if (terminating)
     {
+#ifdef LOCK_SERVER
 	UnlockServer();
+#endif
     }
 }
