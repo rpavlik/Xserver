@@ -383,29 +383,31 @@ winDirectoryExists(const char * path)
 const char *
 winGetBaseDir(void)
 {
-    static BOOL inited = FALSE;
-    static char buffer[MAX_PATH];
-    if (!inited)
+  static BOOL inited = FALSE;
+  static char buffer[MAX_PATH];
+  if (!inited)
+  {
+    char *fendptr;
+    HMODULE module = GetModuleHandle(NULL);
+    DWORD size = GetModuleFileName(module, buffer, sizeof(buffer));
+    if (sizeof(buffer) > 0)
     {
-        char *fendptr;
-        HMODULE module = GetModuleHandle(NULL);
-        DWORD size = GetModuleFileName(module, buffer, sizeof(buffer));
-        if (sizeof(buffer) > 0)
-            buffer[sizeof(buffer)-1] = 0;
-    
-        fendptr = buffer + size;
-        while (fendptr > buffer)
-        {
-            if (*fendptr == '\\' || *fendptr == '/')
-            {
-                *fendptr = 0;
-                break;
-            }
-            fendptr--;
-        }
-        inited = TRUE;
+      buffer[sizeof(buffer) - 1] = 0;
     }
-    return buffer;
+
+    fendptr = buffer + size;
+    while (fendptr > buffer)
+    {
+      if (*fendptr == '\\' || *fendptr == '/')
+      {
+        *fendptr = 0;
+        break;
+      }
+      fendptr--;
+    }
+    inited = TRUE;
+  }
+  return buffer;
 }
 #endif
 
