@@ -36,6 +36,8 @@
 #include <xwin-config.h>
 #endif
 
+#include <window.h>
+
 #ifndef NO
 #define NO			0
 #endif
@@ -165,11 +167,17 @@ winMinimizeWindow (Window id);
  * winmultiwindowicons.c
  */
 
+HICON
+winXIconToHICON (WindowPtr pWin, int iconSize);
+
 void
 winUpdateIcon (Window id);
 
 void 
 winInitGlobalIcons (void);
+
+void
+winSelectIcons (WindowPtr pWin, HICON *pIcon, HICON *pSmallIcon);
 
 void 
 winDestroyIcon(HICON hIcon);
