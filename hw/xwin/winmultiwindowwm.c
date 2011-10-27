@@ -1065,7 +1065,7 @@ winMultiWindowXMsgProc (void *pArg)
 				event.xcreatewindow.window,
 				&attr);
 
-	  if (!attr.override_redirect)
+	  if (!attr.override_redirect && attr.class != InputOnly)
 	    XSetWindowBorderWidth(pProcArg->pDisplay,
 				  event.xcreatewindow.window,
 				  0);
