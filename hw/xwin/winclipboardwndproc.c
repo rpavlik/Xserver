@@ -39,25 +39,16 @@
 #include "misc.h"
 
 /*
- * Constants
- */
-
-#define WIN_CLIPBOARD_PROP	"cyg_clipboard_prop"
-#define WIN_POLL_TIMEOUT	1
-
-
-/*
  * References to external symbols
  */
 
-extern Bool		g_fUseUnicode;
-extern Bool		g_fUnicodeSupport;
 extern void		*g_pClipboardDisplay;
 extern Window		g_iClipboardWindow;
 extern Atom		g_atomLastOwnedSelection;
-
+extern Bool		g_fClipboardStarted;
 /* BPS - g_hwndClipboard needed for X app->Windows paste fix */
 extern HWND		g_hwndClipboard;
+extern Bool		g_fClipboard2;
 
 /* 
  * Local function prototypes
@@ -65,7 +56,7 @@ extern HWND		g_hwndClipboard;
 
 static int
 winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
-			  Bool fUseUnicode, int iTimeoutSec);
+			  Bool fConvertToUnicode);
 
 
 /*
@@ -74,68 +65,24 @@ winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
 
 static int
 winProcessXEventsTimeout (HWND hwnd, int iWindow, Display *pDisplay,
-			  Bool fUseUnicode, int iTimeoutSec)
+			  Bool fConvertToUnicode)
 {
-  int			iConnNumber;
-  struct timeval	tv;
-  int			iReturn;
-  DWORD			dwStopTime = (GetTickCount () / 1000) + iTimeoutSec;
+  int			i = 0, iReturn;
 
   /* We need to ensure that all pending events are processed */
   XSync (pDisplay, FALSE);
-
-  /* Get our connection number */
-  iConnNumber = ConnectionNumber (pDisplay);
-
-  /* Loop for X events */
-  while (1)
+  while (i < 10)
+  {
+    iReturn = winClipboardFlushXEvents (hwnd, iWindow, pDisplay, fConvertToUnicode, ++i);
+    if (WIN_XEVENTS_NOTIFY == iReturn)
     {
-      fd_set		fdsRead;
-
-      /* Setup the file descriptor set */
-      FD_ZERO (&fdsRead);
-      FD_SET (iConnNumber, &fdsRead);
-
-      /* Adjust timeout */
-      tv.tv_sec = dwStopTime - (GetTickCount () / 1000);
-      tv.tv_usec = 0;
-
-      /* Break out if no time left */
-      if (tv.tv_sec < 0)
-	return WIN_XEVENTS_SUCCESS;
-
-      /* Wait for an X event */
-      iReturn = select (iConnNumber + 1,/* Highest fds number */
-			&fdsRead,	/* Read mask */
-			NULL,		/* No write mask */
-			NULL,		/* No exception mask */
-			&tv);		/* No timeout */
-      if (iReturn < 0)
-	{
-	  ErrorF ("winProcessXEventsTimeout - Call to select () failed: %d.  "
-		  "Bailing.\n", iReturn);
-	  break;
-	}
-
-      /* Branch on which descriptor became active */
-      if (FD_ISSET (iConnNumber, &fdsRead))
-	{
-	  /* Process X events */
-	  /* Exit when we see that server is shutting down */
-	  iReturn = winClipboardFlushXEvents (hwnd,
-					      iWindow,
-					      pDisplay,
-					      fUseUnicode);
-	  if (WIN_XEVENTS_NOTIFY == iReturn
-	      || WIN_XEVENTS_CONVERT == iReturn)
-	    {
-	      /* Bail out if convert or notify processed */
-	      return iReturn;
-	    }
-	}
+	winClipboardFlushXEvents (hwnd, iWindow, pDisplay, fConvertToUnicode, -1);
+	return iReturn;
     }
-
-  return WIN_XEVENTS_SUCCESS;
+    Sleep (100);
+  }
+  /* Release the lock when we time out */
+  return winClipboardFlushXEvents (hwnd, iWindow, pDisplay, fConvertToUnicode, -1);
 }
 
 
@@ -267,6 +214,12 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	int	iReturn;
 
 	winDebug ("winClipboardWindowProc - WM_DRAWCLIPBOARD: Enter\n");
+
+	if (!g_fClipboardStarted)
+	{
+	   if (s_hwndNextViewer) SendMessage (s_hwndNextViewer, message, wParam, lParam);
+	   return 0;
+	}
 
 	if (generation != serverGeneration)
           {
@@ -449,31 +402,22 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	int	iReturn;
 	Display *pDisplay = g_pClipboardDisplay;
 	Window	iWindow = g_iClipboardWindow;
-	Bool	fConvertToUnicode;
+	Bool	fConvertToUnicode = FALSE;
 
 	winDebug ("winClipboardWindowProc - WM_RENDER*FORMAT - Hello.\n");
 
 	/* Flag whether to convert to Unicode or not */
-	if (message == WM_RENDERALLFORMATS)
-	  fConvertToUnicode = FALSE;
-	else
-	  fConvertToUnicode = g_fUnicodeSupport && (CF_UNICODETEXT == wParam);
+	if (message == WM_RENDERFORMAT && wParam == CF_UNICODETEXT) fConvertToUnicode = TRUE;
 
 	/* Request the selection contents */
-	iReturn = XConvertSelection (pDisplay,
-				     g_atomLastOwnedSelection,
-				     XInternAtom (pDisplay,
-						  "COMPOUND_TEXT", False),
-				     XInternAtom (pDisplay,
-						  "CYGX_CUT_BUFFER", False),
-				     iWindow,
-				     CurrentTime);
-	if (iReturn == BadAtom || iReturn == BadWindow)
-	  {
-	    winErrorFVerb (1, "winClipboardWindowProc - WM_RENDER*FORMAT - "
-		    "XConvertSelection () failed\n");
-	    break;
-	  }
+	XConvertSelection (pDisplay,
+			   g_atomLastOwnedSelection,
+			   XInternAtom (pDisplay,
+			  	        "COMPOUND_TEXT", False),
+			   XInternAtom (pDisplay,
+					"CYGX_CUT_BUFFER", False),
+			   iWindow,
+			   CurrentTime);
 
 	/* Special handling for WM_RENDERALLFORMATS */
 	if (message == WM_RENDERALLFORMATS)
@@ -503,28 +447,14 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	      }
 	  }
 
-	/* Process the SelectionNotify event */
+	/* Process the SelectionNotify event, there may be a WIN_XEVENTS_CONVERT first and then a WIN_XEVENTS_NOTIFY */
 	iReturn = winProcessXEventsTimeout (hwnd,
 					    iWindow,
 					    pDisplay,
-					    fConvertToUnicode,
-					    WIN_POLL_TIMEOUT);
-	if (WIN_XEVENTS_CONVERT == iReturn)
-	  {
-	    /*
-	     * The selection was offered for conversion first, so we have
-	     * to process a second SelectionNotify event to get the actual
-	     * data in the selection.
-	     */
-	    iReturn = winProcessXEventsTimeout (hwnd,
-						iWindow,
-						pDisplay,
-						fConvertToUnicode,
-						WIN_POLL_TIMEOUT);
-	  }
+					    fConvertToUnicode);
 	
 	/*
-	 * The last of the up-to two calls to winProcessXEventsTimeout
+	 * The last call to winProcessXEventsTimeout
 	 * from above had better have seen a notify event, or else we
 	 * are dealing with a buggy or old X11 app.  In these cases we
 	 * have to paste some fake data to the Win32 clipboard to
@@ -533,11 +463,8 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	if (WIN_XEVENTS_NOTIFY != iReturn)
 	  {
 	    /* Paste no data, to satisfy required call to SetClipboardData */
-	    if (g_fUnicodeSupport)
-	      SetClipboardData (CF_UNICODETEXT, NULL);
+	    SetClipboardData (CF_UNICODETEXT, NULL);
 	    SetClipboardData (CF_TEXT, NULL);
-
-            ErrorF("winClipboardWindowProc - timed out waiting for WIN_XEVENTS_NOTIFY\n");
 	  }
 
 	/* BPS - Post ourselves a user message whose handler will reset the
@@ -545,7 +472,7 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	 * necessary because calling SetClipboardData() with a NULL argument
 	 * here will cause the data we just put on the clipboard to be lost!
 	 */
-	PostMessage(g_hwndClipboard, WM_USER_PASTE_COMPLETE, 0, 0);
+	if(g_fClipboard2) PostMessage(g_hwndClipboard, WM_USER_PASTE_COMPLETE, 0, 0);
 
 	/* Special handling for WM_RENDERALLFORMATS */
 	if (message == WM_RENDERALLFORMATS)
@@ -584,9 +511,8 @@ winClipboardWindowProc (HWND hwnd, UINT message,
 	/* Take ownership of the Windows clipboard */
 	EmptyClipboard ();
 
-	/* Advertise Unicode if we support it */
-	if (g_fUnicodeSupport)
-	  SetClipboardData (CF_UNICODETEXT, NULL);
+	/* Advertise Unicode */
+	SetClipboardData (CF_UNICODETEXT, NULL);
 
 	/* Always advertise regular text */
 	SetClipboardData (CF_TEXT, NULL);

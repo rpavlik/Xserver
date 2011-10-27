@@ -75,6 +75,9 @@ extern void winDebug(const char *format, ...);
 extern void winReshapeMultiWindow(WindowPtr pWin);
 extern void winUpdateRgnMultiWindow(WindowPtr pWin);
 
+extern void winSetAuthorization(void);
+extern void winThreadExit(void *args);
+
 #ifndef CYGDEBUG
 #define CYGDEBUG NO
 #endif
@@ -204,7 +207,11 @@ winUpdateWindowPosition (HWND hWnd, Bool reshape, HWND *zstyle);
  */
 
 static jmp_buf			g_jmpWMEntry;
+static XIOErrorHandler g_winMultiWindowWMOldIOErrorHandler;
+static pthread_t g_winMultiWindowWMThread;
 static jmp_buf			g_jmpXMsgProcEntry;
+static XIOErrorHandler g_winMultiWindowXMsgProcOldIOErrorHandler;
+static pthread_t g_winMultiWindowXMsgProcThread;
 static Bool			g_shutdown = FALSE;
 static Bool			redirectError = FALSE;
 static Bool			g_fAnotherWMRunning = FALSE;
@@ -626,6 +633,8 @@ winMultiWindowWMProc (void *pArg)
 {
   WMProcArgPtr		pProcArg = (WMProcArgPtr)pArg;
   WMInfoPtr		pWMInfo = pProcArg->pWMInfo;
+
+  pthread_cleanup_push(&winThreadExit, NULL);
   
   /* Initialize the Window Manager */
   winInitMultiWindowWM (pWMInfo, pProcArg);
@@ -838,6 +847,9 @@ winMultiWindowWMProc (void *pArg)
 #if CYGMULTIWINDOW_DEBUG
   ErrorF("-winMultiWindowWMProc ()\n");
 #endif
+
+  pthread_cleanup_pop(0);
+
   return NULL;
 }
 
@@ -861,6 +873,8 @@ winMultiWindowXMsgProc (void *pArg)
   XIconSize		*xis;
 
   ErrorF ("winMultiWindowXMsgProc - Hello\n");
+
+  pthread_cleanup_push(&winThreadExit, NULL);
 
   /* Check that argument pointer is not invalid */
   if (pProcArg == NULL)
@@ -901,6 +915,11 @@ winMultiWindowXMsgProc (void *pArg)
 
   ErrorF ("winMultiWindowXMsgProc - pthread_mutex_unlock () returned.\n");
 
+  /* Install our error handler */
+  XSetErrorHandler (winMultiWindowXMsgProcErrorHandler);
+  g_winMultiWindowXMsgProcThread = pthread_self();
+  g_winMultiWindowXMsgProcOldIOErrorHandler = XSetIOErrorHandler (winMultiWindowXMsgProcIOErrorHandler);
+
   /* Set jump point for IO Error exits */
   iReturn = setjmp (g_jmpXMsgProcEntry);
   
@@ -919,19 +938,12 @@ winMultiWindowXMsgProc (void *pArg)
       pthread_exit (NULL);
     }
 
-  /* Install our error handler */
-  XSetErrorHandler (winMultiWindowXMsgProcErrorHandler);
-  XSetIOErrorHandler (winMultiWindowXMsgProcIOErrorHandler);
-
   /* Setup the display connection string x */
   snprintf (pszDisplay,
 	    512, "127.0.0.1:%s.%d", display, (int)pProcArg->dwScreen);
 
   /* Print the display connection string */
   ErrorF ("winMultiWindowXMsgProc - DISPLAY=%s\n", pszDisplay);
-
-  /* Use our generated cookie for authentication */
-  winSetAuthorization();
   
   /* Initialize retry count */
   iRetries = 0;
@@ -1008,7 +1020,7 @@ winMultiWindowXMsgProc (void *pArg)
     Since this is on in the default Solaris 10 install,
     workaround this by making sure it does exist...
    */
-  XInternAtom(pProcArg->pDisplay, "WM_STATE", 0);
+  XInternAtom(pProcArg->pDisplay, "WM_STATE", False);
 
   /* Loop until we explicitly break out */
   while (1)
@@ -1176,7 +1188,9 @@ winMultiWindowXMsgProc (void *pArg)
     }
 
   XCloseDisplay (pProcArg->pDisplay);
-  pthread_exit (NULL);
+
+  pthread_cleanup_pop(0);
+
   return NULL;
 }
 
@@ -1308,6 +1322,11 @@ winInitMultiWindowWM (WMInfoPtr pWMInfo, WMProcArgPtr pProcArg)
 
   ErrorF ("winInitMultiWindowWM - pthread_mutex_unlock () returned.\n");
 
+  /* Install our error handler */
+  XSetErrorHandler (winMultiWindowWMErrorHandler);
+  g_winMultiWindowWMThread = pthread_self();
+  g_winMultiWindowWMOldIOErrorHandler = XSetIOErrorHandler (winMultiWindowWMIOErrorHandler);
+
   /* Set jump point for IO Error exits */
   iReturn = setjmp (g_jmpWMEntry);
   
@@ -1325,10 +1344,6 @@ winInitMultiWindowWM (WMInfoPtr pWMInfo, WMProcArgPtr pProcArg)
       ErrorF ("winInitMultiWindowWM - Caught IO Error.  Exiting.\n");
       pthread_exit (NULL);
     }
-
-  /* Install our error handler */
-  XSetErrorHandler (winMultiWindowWMErrorHandler);
-  XSetIOErrorHandler (winMultiWindowWMIOErrorHandler);
 
   /* Setup the display connection string x */
   snprintf (pszDisplay,
@@ -1456,12 +1471,18 @@ winMultiWindowWMIOErrorHandler (Display *pDisplay)
 {
   ErrorF ("winMultiWindowWMIOErrorHandler!\n\n");
 
-  if (g_shutdown)
-    pthread_exit(NULL);
+  if (pthread_equal(pthread_self(), g_winMultiWindowWMThread))
+    {
+      if (g_shutdown)
+        pthread_exit(NULL);
 
-  /* Restart at the main entry point */
-  longjmp (g_jmpWMEntry, WIN_JMP_ERROR_IO);
-  
+      /* Restart at the main entry point */
+      longjmp (g_jmpWMEntry, WIN_JMP_ERROR_IO);
+    }
+
+  if (g_winMultiWindowWMOldIOErrorHandler)
+    g_winMultiWindowWMOldIOErrorHandler(pDisplay);
+
   return 0;
 }
 
@@ -1494,11 +1515,17 @@ winMultiWindowXMsgProcErrorHandler (Display *pDisplay, XErrorEvent *pErr)
 static int
 winMultiWindowXMsgProcIOErrorHandler (Display *pDisplay)
 {
-  ErrorF ("winMultiWindowXMsgProcIOErrorHandler!\n\n");
+  ErrorF ("winMultiWindowXMsgProcIOErrorHandler!\n");
 
-  /* Restart at the main entry point */
-  longjmp (g_jmpXMsgProcEntry, WIN_JMP_ERROR_IO);
-  
+  if (pthread_equal(pthread_self(), g_winMultiWindowXMsgProcThread))
+    {
+      /* Restart at the main entry point */
+      longjmp (g_jmpXMsgProcEntry, WIN_JMP_ERROR_IO);
+    }
+
+  if (g_winMultiWindowXMsgProcOldIOErrorHandler)
+    g_winMultiWindowXMsgProcOldIOErrorHandler(pDisplay);
+
   return 0;
 }
 

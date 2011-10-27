@@ -38,13 +38,6 @@
 
 
 /*
- * References to external symbols
- */
-
-extern Bool		g_fUnicodeSupport;
-
-
-/*
  * Process any pending X events
  */
 
@@ -52,13 +45,35 @@ int
 winClipboardFlushXEvents (HWND hwnd,
 			  int iWindow,
 			  Display *pDisplay,
-			  Bool fUseUnicode)
+			  Bool fUseUnicode,
+			  int iLock)
 {
+  XTextProperty		xtpText = {NULL, 0};
+  XEvent		event;
+  XSelectionEvent	eventSelection;
+  unsigned long		ulReturnBytesLeft;
+  char			*pszReturnData = NULL;
+  char			*pszGlobalData = NULL;
+  int			iReturn;
+  HGLOBAL		hGlobal = NULL;
+  XICCEncodingStyle	xiccesStyle;
+  int			iConvertDataLen;
+  char			*pszConvertData = NULL;
+  char			*pszTextList[2] = {NULL};
+  int			iCount;
+  char			**ppszTextList = NULL;
+  wchar_t		*pwszUnicodeStr = NULL;
+  int			iUnicodeLen = 0;
+  int			iReturnDataLen;
+  int			i;
+  Bool			fAbort, fCloseClipboard, fSetClipboardData;
+
   static Atom atomLocalProperty;
   static Atom atomCompoundText;
   static Atom atomUTF8String;
   static Atom atomTargets;
   static int generation;
+  static int localLock;
 
   if (generation != serverGeneration)
     {
@@ -69,31 +84,20 @@ winClipboardFlushXEvents (HWND hwnd,
       atomTargets = XInternAtom (pDisplay, "TARGETS", False);
     }
 
+  if (iLock > 0) localLock = iLock;				/* Apply a lock */
+  else if (iLock < 0)
+    {
+       localLock = 0;
+       return WIN_XEVENTS_SUCCESS;
+    }								/* Clear a lock */
+  if (iLock == 0 && localLock > 0) return WIN_XEVENTS_SUCCESS;	/* Use a lock */
+
   /* Process all pending events */
   while (XPending (pDisplay))
     {
-      XTextProperty		xtpText = {0};
-      XEvent			event;
-      XSelectionEvent		eventSelection;
-      unsigned long		ulReturnBytesLeft;
-      char			*pszReturnData = NULL;
-      char			*pszGlobalData = NULL;
-      int			iReturn;
-      HGLOBAL			hGlobal = NULL;
-      XICCEncodingStyle		xiccesStyle;
-      int			iConvertDataLen = 0;
-      char			*pszConvertData = NULL;
-      char			*pszTextList[2] = {NULL};
-      int			iCount;
-      char			**ppszTextList = NULL;
-      wchar_t			*pwszUnicodeStr = NULL;
-      int			iUnicodeLen = 0;
-      int			iReturnDataLen = 0;
-      int			i;
-      Bool			fAbort = FALSE;
-      Bool			fCloseClipboard = FALSE;
-      Bool			fSetClipboardData = TRUE;
-
+      fAbort = FALSE;
+      fCloseClipboard = FALSE;
+      fSetClipboardData = TRUE;
       /* Get the next event - will not block because one is ready */
       XNextEvent (pDisplay, &event);
 
@@ -659,7 +663,7 @@ winClipboardFlushXEvents (HWND hwnd,
 	  xtpText.nitems = 0;
 
 	  /* Convert the X clipboard string to DOS format */
-	  winClipboardUNIXtoDOS (&pszReturnData, strlen (pszReturnData));
+	  winClipboardUNIXtoDOS ((unsigned char **)&pszReturnData, strlen (pszReturnData));
 
 	  if (fUseUnicode)
 	    {
@@ -779,10 +783,11 @@ winClipboardFlushXEvents (HWND hwnd,
 	  free(pwszUnicodeStr);
 	  if (hGlobal && pszGlobalData)
 	    GlobalUnlock (hGlobal);
-	  if (fSetClipboardData && g_fUnicodeSupport)
-	    SetClipboardData (CF_UNICODETEXT, NULL);
 	  if (fSetClipboardData)
+	  {
+	    SetClipboardData (CF_UNICODETEXT, NULL);
 	    SetClipboardData (CF_TEXT, NULL);
+	  }
 	  return WIN_XEVENTS_NOTIFY;
 
         case SelectionClear:
