@@ -82,7 +82,7 @@
 /*
  * Number of times to call Restore in an attempt to restore the primary surface
  */
-#define WIN_REGAIN_SURFACE_RETRIES		1
+#define WIN_REGAIN_SURFACE_RETRIES		2
 
 /*
  * Build a supported display depths mask by shifting one to the left
