@@ -291,9 +291,7 @@ IsRaiseOnClick (WindowPtr pWin)
 
   struct _Window	*pwin;
   struct _Property	*prop;  
-  /* XXX We're getting inputInfo.poniter here, but this might be really wrong.
-   * Which pointer's current window do we want? */
-  WindowPtr		pRoot = GetCurrentRootWindow (inputInfo.pointer);
+  WindowPtr		pRoot = GetCurrentRootWindow (g_pwinPointer);
 
   if (!pWin)
     {
@@ -346,9 +344,7 @@ IsMouseActive (WindowPtr pWin)
 
   struct _Window	*pwin;
   struct _Property	*prop;
-  /* XXX We're getting inputInfo.poniter here, but this might be really wrong.
-   * Which pointer's current window do we want? */
-  WindowPtr		pRoot = GetCurrentRootWindow (inputInfo.pointer);
+  WindowPtr		pRoot = GetCurrentRootWindow (g_pwinPointer);
 
   if (!pWin)
     {
@@ -530,8 +526,8 @@ winMWExtWMWindowProc (HWND hwnd, UINT message,
 	break;
 
       /* Has the mouse pointer crossed screens? */
-      if (pScreen != miPointerGetScreen(inputInfo.pointer))
-	miPointerSetScreen (inputInfo.pointer, pScreenInfo->dwScreen,
+      if (pScreen != miPointerGetScreen(g_pwinPointer))
+	miPointerSetScreen (g_pwinPointer, pScreenInfo->dwScreen,
 			       ptMouse.x - pScreenInfo->dwXOffset,
 			       ptMouse.y - pScreenInfo->dwYOffset);
 
