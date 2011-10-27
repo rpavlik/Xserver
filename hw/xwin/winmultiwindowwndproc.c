@@ -413,7 +413,7 @@ winTopLevelWindowProc (HWND hwnd, UINT message,
         GetWindowRect(hwnd, &rWindow);
         hRgnWindow = CreateRectRgnIndirect(&rWindow);
         SetWindowRgn (hwnd, hRgnWindow, TRUE);
-        DeleteObject(hRgnWindow);
+        /* DeleteObject(hRgnWindow); the system deletes the handle when no longer needed, see SetWindowRgn() on msdn */
       }
 
       SetWindowLongPtr(hwnd, GWLP_USERDATA, (LONG_PTR)XMING_SIGNATURE);
