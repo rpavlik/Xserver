@@ -1579,6 +1579,7 @@ CheckAnotherWindowManager (Display *pDisplay, DWORD dwScreen, Bool fAllowOtherWM
 void
 winDeinitMultiWindowWM (void)
 {
+  if (g_shutdown == TRUE) return;
   ErrorF ("winDeinitMultiWindowWM - Noting shutdown in progress\n");
   g_shutdown = TRUE;
 }
