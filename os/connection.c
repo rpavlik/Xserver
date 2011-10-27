@@ -975,6 +975,7 @@ CheckConnections(void)
     struct timeval	notime;
     int r;
 #ifdef WIN32
+    int j;
     fd_set savedAllClients;
 #endif
 
@@ -1001,19 +1002,28 @@ CheckConnections(void)
 	}
     }	
 #else
-    XFD_COPYSET(&AllClients, &savedAllClients);
+  /* First test AllSockets and then AllClients are valid sockets */
+  XFD_COPYSET(&AllSockets, &savedAllClients);
+  for (j = 0; j < 2; j++)
+  {
     for (i = 0; i < XFD_SETCOUNT(&savedAllClients); i++)
     {
-	curclient = XFD_FD(&savedAllClients, i);
-	FD_ZERO(&tmask);
-	FD_SET(curclient, &tmask);
-        do {
-            r = Select (curclient + 1, &tmask, NULL, NULL, &notime);
-        } while (r < 0 && (errno == EINTR || errno == EAGAIN));
-	if (r < 0)
-            if (GetConnectionTranslation(curclient) > 0)
-                CloseDownClient(clients[GetConnectionTranslation(curclient)]);
-    }	
+      curclient = XFD_FD(&savedAllClients, i);
+      FD_ZERO(&tmask);
+      FD_SET(curclient, &tmask);
+      do
+      {
+        r = Select(curclient + 1, &tmask, NULL, NULL, &notime);
+      }
+      while (r == SOCKET_ERROR && (WSAGetLastError() == WSAEINTR || WSAGetLastError() == WSAEWOULDBLOCK));
+      if (r < 0)
+        if (GetConnectionTranslation(curclient) > 0)
+        {
+          CloseDownClient(clients[GetConnectionTranslation(curclient)]);
+        }
+    }
+    XFD_COPYSET(&AllClients, &savedAllClients);
+  }
 #endif
 }
 
