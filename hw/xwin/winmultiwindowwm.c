@@ -716,7 +716,6 @@ winMultiWindowWMProc (void *pArg)
 			   (unsigned char *) &(pNode->msg.hwndWindow),
 			   1);
 	  UpdateName (pWMInfo, pNode->msg.iWindow);
-	  winUpdateIcon (pNode->msg.iWindow);
 	  break;
 
 	case WM_WM_MAP2:
@@ -746,13 +745,12 @@ winMultiWindowWMProc (void *pArg)
 			   PropModeReplace,
 			   (unsigned char *) &(pNode->msg.hwndWindow),
 			   1);
-	  UpdateName (pWMInfo, pNode->msg.iWindow);
-	  winUpdateIcon (pNode->msg.iWindow);
 	  {
 	    HWND zstyle = HWND_NOTOPMOST;
 	    winApplyHints (pWMInfo->pDisplay, pNode->msg.iWindow, pNode->msg.hwndWindow, &zstyle);
 	    winUpdateWindowPosition (pNode->msg.hwndWindow, TRUE, &zstyle);
 	  }
+	  UpdateName (pWMInfo, pNode->msg.iWindow);
 	  break;
 
 	case WM_WM_UNMAP:
