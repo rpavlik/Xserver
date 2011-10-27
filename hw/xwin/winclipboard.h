@@ -39,7 +39,7 @@
 #include <sys/select.h>
 #else
 #include <X11/Xwinsock.h>
-#define HAS_WINSOCK
+#define HAS_WINSOCK 1
 #endif
 #include <fcntl.h>
 #include <setjmp.h>
@@ -72,7 +72,10 @@
 #define WIN_XEVENTS_CONVERT			2
 #define WIN_XEVENTS_NOTIFY			3
 
-#define WM_WM_REINIT                           (WM_USER + 1)
+#define WM_WM_REINIT                           (WM_USER + 200)
+
+#define WIN_CLIPBOARD_RETRIES			40
+#define WIN_CLIPBOARD_DELAY			1
 
 /*
  * References to external symbols
@@ -93,6 +96,9 @@ winInitClipboard (void);
 
 HWND
 winClipboardCreateMessagingWindow (void);
+
+void
+winFixClipboardChain(void);
 
 
 /*
@@ -118,14 +124,6 @@ winDeinitClipboard (void);
 
 
 /*
- * winclipboardunicode.c
- */
-
-Bool
-winClipboardDetectUnicodeSupport (void);
-
-
-/*
  * winclipboardwndproc.c
  */
 
@@ -145,5 +143,6 @@ int
 winClipboardFlushXEvents (HWND hwnd,
 			  int iWindow,
 			  Display *pDisplay,
-			  Bool fUnicodeSupport);
+			  Bool fUseUnicode,
+			  int iLock);
 #endif
