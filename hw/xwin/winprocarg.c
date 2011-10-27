@@ -44,7 +44,11 @@ from The Open Group.
 #ifdef XWIN_CLIPBOARD
 extern Bool			g_fUnicodeClipboard;
 extern Bool			g_fClipboard;
+extern Bool			g_fClipboard2;
 #endif
+typedef struct FT_LibraryRec_  *FT_Library;
+typedef signed int  FT_Int;
+extern const char* pixman_version_string (void);
 
 /*
  * Function prototypes
@@ -126,7 +130,7 @@ winInitializeScreenDefaults(void)
   defaultScreenInfo.fLessPointer = FALSE;
   defaultScreenInfo.iResizeMode = notAllowed;
   defaultScreenInfo.fNoTrayIcon = FALSE;
-  defaultScreenInfo.iE3BTimeout = WIN_E3B_OFF;
+  defaultScreenInfo.iE3BTimeout = WIN_E3B_DEFAULT;
   defaultScreenInfo.fUseWinKillKey = WIN_DEFAULT_WIN_KILL;
   defaultScreenInfo.fUseUnixKillKey = WIN_DEFAULT_UNIX_KILL;
   defaultScreenInfo.fIgnoreInput = FALSE;
@@ -139,8 +143,6 @@ winInitializeScreenDefaults(void)
 static void
 winInitializeScreen(int i)
 {
-  winErrorFVerb (2, "winInitializeScreen - %d\n",i);
-
   /* Initialize default screen values, if needed */
   winInitializeScreenDefaults();
 
@@ -246,8 +248,6 @@ ddxProcessArgument (int argc, char *argv[], int i)
    */ 
   if (IS_OPTION ("-help") || IS_OPTION("-h") || IS_OPTION("--help"))
     {
-      /* Reset logfile. We don't need that helpmessage in the logfile */  
-      g_pszLogFile = NULL;
       g_fNoHelpMessageBox = TRUE;
       UseMsg();
       exit (0);
@@ -256,9 +256,9 @@ ddxProcessArgument (int argc, char *argv[], int i)
 
   if (IS_OPTION ("-version") || IS_OPTION("--version"))
     {
-      /* Reset logfile. We don't need that versioninfo in the logfile */  
-      g_pszLogFile = NULL;
       winLogVersionInfo ();
+      g_fNoHelpMessageBox = TRUE;
+      UseMsg();
       exit (0);
       return 1;
     }
@@ -311,8 +311,7 @@ ddxProcessArgument (int argc, char *argv[], int i)
         struct GetMonitorInfoData data;
         if (!QueryMonitor(iMonitor, &data))
         {
-            ErrorF ("ddxProcessArgument - screen - "
-                    "Querying monitors is not supported on NT4 and Win95\n");
+            ErrorF ("ddxProcessArgument - screen - Querying monitors failed\n");
         } else if (data.bMonitorSpecifiedExists == TRUE) 
         {
 		  winErrorFVerb(2, "ddxProcessArgument - screen - Found Valid ``@Monitor'' = %d arg\n", iMonitor);
@@ -368,8 +367,7 @@ ddxProcessArgument (int argc, char *argv[], int i)
           struct GetMonitorInfoData data;
           if (!QueryMonitor(iMonitor, &data))
           {
-              ErrorF ("ddxProcessArgument - screen - "
-                      "Querying monitors is not supported on NT4 and Win95\n");
+              ErrorF ("ddxProcessArgument - screen - Querying monitors failed\n");
           } else if (data.bMonitorSpecifiedExists == TRUE) 
           {
 			g_ScreenInfo[nScreenNum].iMonitor = iMonitor;
@@ -396,8 +394,7 @@ ddxProcessArgument (int argc, char *argv[], int i)
         struct GetMonitorInfoData data;
         if (!QueryMonitor(iMonitor, &data))
         {
-		  ErrorF ("ddxProcessArgument - screen - "
-                  "Querying monitors is not supported on NT4 and Win95\n");
+		  ErrorF ("ddxProcessArgument - screen - Querying monitors failed\n");
         } else if (data.bMonitorSpecifiedExists == TRUE) 
         {
 		  winErrorFVerb (2, "ddxProcessArgument - screen - Found Valid ``@Monitor'' = %d arg\n", iMonitor);
@@ -661,6 +658,13 @@ ddxProcessArgument (int argc, char *argv[], int i)
   if (IS_OPTION ("-scrollbars"))
     {
 
+      if (screenInfoPtr->iResizeMode == resizeWithRandr)
+	{
+	  ErrorF ("ddxProcessArgument - scrollbars - Cannot have scrollbars and resize\n");
+                  UseMsg ();
+                  exit (0);
+                  return 0;
+	}
       screenInfoPtr->iResizeMode = resizeWithScrollbars;
 
       /* Indicate that we have processed this argument */
@@ -670,37 +674,17 @@ ddxProcessArgument (int argc, char *argv[], int i)
   /*
    * Look for the '-resize' argument
    */
-  if (IS_OPTION ("-resize") || IS_OPTION ("-noresize") ||
-      (strncmp(argv[i], "-resize=",strlen("-resize=")) == 0))
+  if (IS_OPTION ("-resize"))
     {
-      winResizeMode mode;
 
-      if (IS_OPTION ("-resize"))
-        mode = resizeWithRandr;
-      else if (IS_OPTION ("-noresize"))
-        mode = notAllowed;
-      else if (strncmp(argv[i], "-resize=",strlen("-resize=")) == 0)
-        {
-          char *option = argv[i] + strlen("-resize=");
-          if (strcmp(option, "randr") == 0)
-            mode = resizeWithRandr;
-          else if (strcmp(option, "scrollbars") == 0)
-            mode = resizeWithScrollbars;
-          else if (strcmp(option, "none") == 0)
-            mode = notAllowed;
-          else
-            {
-              ErrorF ("ddxProcessArgument - resize - Invalid resize mode %s\n", option);
-              return 0;
-            }
-        }
-      else
-        {
-          ErrorF ("ddxProcessArgument - resize - Invalid resize option %s\n", argv[i]);
-          return 0;
-        }
-
-      screenInfoPtr->iResizeMode = mode;
+      if (screenInfoPtr->iResizeMode == resizeWithScrollbars)
+	{
+	  ErrorF ("ddxProcessArgument - resize - Cannot have resize and scrollbars\n");
+                  UseMsg ();
+                  exit (0);
+                  return 0;
+	}
+      screenInfoPtr->iResizeMode = resizeWithRandr;
 
       /* Indicate that we have processed this argument */
       return 1;
@@ -710,21 +694,10 @@ ddxProcessArgument (int argc, char *argv[], int i)
   /*
    * Look for the '-clipboard' argument
    */
-  if (IS_OPTION ("-clipboard"))
+  if (IS_OPTION ("-clipboard") || IS_OPTION ("-clipboard2"))
     {
-      /* Now the default, we still accept the arg for backwards compatibility */
       g_fClipboard = TRUE;
-
-      /* Indicate that we have processed this argument */
-      return 1;
-    }
-
-  /*
-   * Look for the '-noclipboard' argument
-   */
-  if (IS_OPTION ("-noclipboard"))
-    {
-      g_fClipboard = FALSE;
+      if (IS_OPTION ("-clipboard2")) g_fClipboard2 = TRUE;
 
       /* Indicate that we have processed this argument */
       return 1;
@@ -774,6 +747,17 @@ ddxProcessArgument (int argc, char *argv[], int i)
 
       /* Indicate that we have processed this argument */
       return iArgsProcessed;
+    }
+
+  /*
+   * Look for the '-noemulate3buttons' argument
+   */
+  if (IS_OPTION ("-noemulate3buttons"))
+    {
+      screenInfoPtr->iE3BTimeout = WIN_E3B_OFF;
+
+      /* Indicate that we have processed this argument */
+      return 1;
     }
 
   /*
@@ -950,7 +934,19 @@ ddxProcessArgument (int argc, char *argv[], int i)
    */
   if (IS_OPTION ("-auth"))
     {
+      HANDLE hFile;
+      char * pszFile;
+      CHECK_ARGS (1);
       g_fAuthEnabled = TRUE;
+      pszFile = argv[++i];
+      hFile = CreateFile(pszFile,GENERIC_READ,FILE_SHARE_READ,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+      if (hFile == INVALID_HANDLE_VALUE)
+	winMessageBoxF ("This authorization file for the -auth option could not be opened...\n"
+			"\"%s\"\n"
+			"You should use an \"Xauthority\" file in your HOME directory.\n"
+			"\nIgnoring and continuing.\n",
+			MB_ICONINFORMATION,
+			pszFile);
       return 0; /* Let DIX parse this again */
     }
 
@@ -1191,8 +1187,8 @@ winLogCommandLine (int argc, char *argv[])
       iCurrLen += strlen (argv[i]);
     }
 
-  ErrorF ("XWin was started with the following command line:\n\n"
-	  "%s\n\n", g_pszCommandLine);
+  ErrorF ("%s was started with the following command line...\n"
+	  "%s\n", PROJECT_NAME, g_pszCommandLine);
 }
 
 
@@ -1203,15 +1199,22 @@ winLogCommandLine (int argc, char *argv[])
 void
 winLogVersionInfo (void)
 {
-  static Bool		s_fBeenHere = FALSE;
+  FT_Library library;
+  FT_Int amajor, aminor, apatch;
+  const int error = FT_Init_FreeType(&library);
 
-  if (s_fBeenHere)
-    return;
-  s_fBeenHere = TRUE;
-
-  ErrorF ("Welcome to the XWin X Server\n");
+  ErrorF ("Welcome to the %s X Server\n", PROJECT_NAME);
   ErrorF ("Vendor: %s\n", XVENDORNAME);
   ErrorF ("Release: %d.%d.%d.%d (%d)\n", XORG_VERSION_MAJOR, XORG_VERSION_MINOR, XORG_VERSION_PATCH, XORG_VERSION_SNAP, XORG_VERSION_CURRENT);
   ErrorF ("%s\n\n", BUILDERSTRING);
   ErrorF ("Contact: %s\n", BUILDERADDR);
+  if (error) ErrorF ("winLogVersionInfo - Can't initialize freetype library\n");
+  FT_Library_Version(library, &amajor, &aminor, &apatch);
+  ErrorF ("FreeType2: %d.%d.%d\n", amajor, aminor, apatch);
+  FT_Done_FreeType(library);
+  ErrorF ("Pixman: %s\n", pixman_version_string());
+  ErrorF ("Contact: %s\n\n", BUILDERADDR);
+  if (g_pszCommandLine)
+    ErrorF ("%s was started with the following command line...\n"
+	    "%s\n", PROJECT_NAME, g_pszCommandLine);
 }
