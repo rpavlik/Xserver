@@ -32,12 +32,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define BASE_SIZE 16
 #define CORE "X11"
+
+/* Should this actually be checking RELOCATE_PROJECTROOT ? */
 #ifdef __MINGW32__
-#define FILENAME "protocol.txt"
+#define FILENAME_ONLY "protocol.txt"
 extern const char *winGetBaseDir(void);
-#else
-#define FILENAME SERVER_MISC_CONFIG_PATH "/protocol.txt"
 #endif
+#define FILENAME SERVER_MISC_CONFIG_PATH "/protocol.txt"
+
 
 #define PROT_COMMENT '#'
 #define PROT_REQUEST 'R'
@@ -319,12 +321,15 @@ dixResetRegistry(void)
 #ifdef __MINGW32__
     {
 	char filename[MAX_PATH];
-	snprintf(filename, sizeof(filename), "%s\\%s", winGetBaseDir(), FILENAME);
+	snprintf(filename, sizeof(filename), "%s\\%s", winGetBaseDir(), FILENAME_ONLY);
 	filename[sizeof(filename)-1] = 0;
 	fh = fopen(filename, "r");
     }
-#else
+    if (!fh) {
+#endif
     fh = fopen(FILENAME, "r");
+#ifdef __MINGW32__
+	}
 #endif
     if (!fh)
 	LogMessage(X_WARNING, "Failed to open protocol names file " FILENAME "\n");
