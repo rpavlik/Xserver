@@ -84,7 +84,6 @@ Bool            g_fNativeGl = FALSE;
  * Wrapped DIX functions
  */
 winDispatchProcPtr	winProcEstablishConnectionOrig = NULL;
-winDispatchProcPtr	winProcQueryTreeOrig = NULL;
 winDispatchProcPtr	winProcSetSelectionOwnerOrig = NULL;
 
 
