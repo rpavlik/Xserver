@@ -40,7 +40,6 @@
 
 #ifdef XWIN_CLIPBOARD
 int winProcEstablishConnection(ClientPtr /* client */);
-int winProcQueryTree(ClientPtr /* client */);
 int winProcSetSelectionOwner(ClientPtr /* client */);
 #endif
 
@@ -112,18 +111,13 @@ InitInput (int argc, char *argv[])
       winProcEstablishConnectionOrig = InitialVector[2];
       InitialVector[2] = winProcEstablishConnection;
     }
-  if (g_fXdmcpEnabled
-      && ProcVector[X_QueryTree] != winProcQueryTree)
-    {
-      winProcQueryTreeOrig = ProcVector[X_QueryTree];
-      ProcVector[X_QueryTree] = winProcQueryTree;
-    }
 #endif
 
-  g_pwinPointer = AddInputDevice (serverClient, winMouseProc, TRUE);
-  g_pwinKeyboard = AddInputDevice (serverClient, winKeybdProc, TRUE);
-  g_pwinPointer->name = strdup("Windows mouse");
-  g_pwinKeyboard->name = strdup("Windows keyboard");
+  if (AllocDevicePair(serverClient, "Windows",
+		      &g_pwinPointer, &g_pwinKeyboard,
+		      winMouseProc, winKeybdProc,
+		      FALSE) != Success)
+    FatalError("InitInput - Failed to allocate slave devices.\n");
 
   mieqInit ();
 
