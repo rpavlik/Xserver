@@ -36,6 +36,7 @@ from The Open Group.
 #include "winconfig.h"
 #include "winprefs.h"
 #include "glx/glwindows.h"
+BOOL IsWow64 (void);
 #ifdef XWIN_CLIPBOARD
 #include "X11/Xlocale.h"
 #endif
