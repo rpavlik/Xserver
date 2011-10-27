@@ -118,6 +118,12 @@ Equipment Corporation.
 
 extern void Dispatch(void);
 
+#ifdef WIN32
+#include <X11/Xwindows.h>
+#include <pthread.h>
+extern int XInitThreads(void);
+#endif
+
 #ifdef XQUARTZ
 #include <pthread.h>
 
@@ -136,6 +142,15 @@ int main(int argc, char *argv[], char *envp[])
     HWEventQueueType	alwaysCheckForInput[2];
 
     display = "0";
+
+#ifdef WIN32
+    if (XInitThreads() == 0)
+    {
+	MessageBox(NULL, "XInitThreads() failed", "Xming failed to start!", MB_OK | MB_ICONEXCLAMATION);
+	pthread_exit (NULL);
+	return 1;
+    }
+#endif
 
     InitRegions();
 
