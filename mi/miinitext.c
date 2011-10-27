@@ -89,6 +89,10 @@ SOFTWARE.
 #undef XF86VIDMODE
 #endif
 
+#ifdef HAVE_XWIN_CONFIG_H
+#include <xwin-config.h>
+#endif
+
 #include "misc.h"
 #include "extension.h"
 #include "micmap.h"
@@ -263,6 +267,10 @@ extern void DamageExtensionInit(INITARGS);
 extern void CompositeExtensionInit(INITARGS);
 #endif
 extern void GEExtensionInit(INITARGS);
+
+#ifdef DDXPUSHPROVIDER
+extern void ddxPushProviders(void);
+#endif
 
 /* The following is only a small first step towards run-time
  * configurable extensions.
@@ -467,7 +475,12 @@ InitExtensions(int argc, char *argv[])
 
 #ifdef GLXEXT
     if (serverGeneration == 1)
-	GlxPushProvider(&__glXDRISWRastProvider);
+      {
+        GlxPushProvider(&__glXDRISWRastProvider);
+#ifdef DDXPUSHPROVIDER
+        ddxPushProviders();
+#endif
+      }
     if (!noGlxExtension) GlxExtensionInit();
 #endif
 }
