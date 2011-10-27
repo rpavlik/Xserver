@@ -131,13 +131,20 @@ winURLWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
   WNDPROC origCB = NULL;
   HCURSOR cursor;
   
-  /* If it's a SetCursor message, tell it to the hand */
-  if (msg==WM_SETCURSOR) {
-    cursor = LoadCursor (NULL, IDC_HAND);
-    if (cursor)
-      SetCursor (cursor);
-    return TRUE;
-  }
+  switch (msg)
+    {
+    case WM_SETCURSOR:
+      /* If it's a SetCursor message, tell it to the hand */
+      cursor = (HCURSOR)LoadImage (NULL, IDC_HAND, IMAGE_CURSOR, 0, 0, LR_DEFAULTSIZE | LR_SHARED);
+      if (cursor) SetCursor (cursor);
+      return TRUE;
+    case WM_GETDLGCODE:
+      /* We handle 'default' pushbutton input in the BS_OWNERDRAW controls */
+      return DLGC_BUTTON | DLGC_DEFPUSHBUTTON;
+    case BM_SETSTYLE:
+      /* and loose pushbutton style messages to avoid being drawn pushbutton */
+      return TRUE;
+    }
   origCB = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA);
   /* Otherwise fall through to original WndProc */
   if (origCB)
