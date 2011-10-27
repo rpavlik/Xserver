@@ -264,19 +264,21 @@ NetWMToWinIconAlpha(uint32_t *icon)
   HICON result;
   HDC hdc = GetDC(NULL);
   uint32_t *DIB_pixels;
-  ICONINFO ii = {TRUE};
-  BITMAPV4HEADER bmh = {sizeof(bmh)};
+  ICONINFO ii;
+  BITMAPV5HEADER bmh;
 
   /* Define an ARGB pixel format used for Color+Alpha icons */
-  bmh.bV4Width = width;
-  bmh.bV4Height = -height; /* Invert the image */
-  bmh.bV4Planes = 1;
-  bmh.bV4BitCount = 32;
-  bmh.bV4V4Compression = BI_BITFIELDS;
-  bmh.bV4AlphaMask = 0xFF000000;
-  bmh.bV4RedMask =   0x00FF0000;
-  bmh.bV4GreenMask = 0x0000FF00;
-  bmh.bV4BlueMask =  0x000000FF;
+  memset (&bmh, 0, sizeof(BITMAPV5HEADER));
+  bmh.bV5Size = sizeof(BITMAPV5HEADER);
+  bmh.bV5Width = width;
+  bmh.bV5Height = -height; /* Invert the image */
+  bmh.bV5Planes = 1;
+  bmh.bV5BitCount = 32;
+  bmh.bV5Compression = BI_BITFIELDS;
+  bmh.bV5AlphaMask = 0xFF000000;
+  bmh.bV5RedMask =   0x00FF0000;
+  bmh.bV5GreenMask = 0x0000FF00;
+  bmh.bV5BlueMask =  0x000000FF;
 
   ii.hbmColor = CreateDIBSection(hdc, (BITMAPINFO*)&bmh,
                 DIB_RGB_COLORS, (void**)&DIB_pixels, NULL, 0);
@@ -287,6 +289,9 @@ NetWMToWinIconAlpha(uint32_t *icon)
   /* CreateIconIndirect() traditionally required DDBitmaps */
   /* Systems from WinXP accept 32-bit ARGB DIBitmaps with full 8-bit alpha support */
   /* The icon is created with a DIB + empty DDB mask (an MS example does the same) */
+  ii.fIcon = TRUE;
+  ii.xHotspot = 0;
+  ii.yHotspot = 0;
   result = CreateIconIndirect(&ii);
 
   DeleteObject(ii.hbmColor);
@@ -304,7 +309,7 @@ NetWMToWinIconThreshold(uint32_t *icon)
   uint32_t *pixels = &icon[2];
   int row, col;
   HICON result;
-  ICONINFO ii = {TRUE};
+  ICONINFO ii;
 
   HDC hdc = GetDC(NULL);
   HDC xorDC = CreateCompatibleDC(hdc);
@@ -332,6 +337,9 @@ NetWMToWinIconThreshold(uint32_t *icon)
   DeleteDC(xorDC);
   DeleteDC(andDC);
 
+  ii.fIcon = TRUE;
+  ii.xHotspot = 0;
+  ii.yHotspot = 0;
   result = CreateIconIndirect(&ii);
 
   DeleteObject(ii.hbmColor);
@@ -344,8 +352,13 @@ NetWMToWinIconThreshold(uint32_t *icon)
 static HICON
 NetWMToWinIcon(int bpp, uint32_t *icon)
 {
+#ifdef __MINGW32__
+  Bool hasIconAlphaChannel = TRUE;
+  BOOL versionChecked = TRUE;
+#else
   static Bool hasIconAlphaChannel = FALSE;
   static BOOL versionChecked = FALSE;
+#endif
 
   if (!versionChecked)
     {
