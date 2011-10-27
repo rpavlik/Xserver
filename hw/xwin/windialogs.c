@@ -778,3 +778,73 @@ winAboutDlgProc (HWND hwndDialog, UINT message,
 
   return FALSE;
 }
+
+void
+winCreateProcess (const char* exe, const char* file, const char* err, DWORD wShowWindow)
+{
+  char buffer[MAX_PATH+1];
+  STARTUPINFO start;
+  PROCESS_INFORMATION child;
+
+  if (file)
+  {
+    HANDLE hFile;
+
+    hFile = CreateFile(file,GENERIC_READ,FILE_SHARE_READ|FILE_SHARE_WRITE,NULL,OPEN_EXISTING,FILE_ATTRIBUTE_NORMAL,NULL);
+    if (hFile == INVALID_HANDLE_VALUE) {
+      LPVOID lpMsgBuf;
+
+      FormatMessage (FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		     FORMAT_MESSAGE_FROM_SYSTEM |
+		     FORMAT_MESSAGE_IGNORE_INSERTS,
+		     NULL,
+		     GetLastError (),
+		     MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		     (LPTSTR) &lpMsgBuf,
+		     0, NULL);
+      snprintf (buffer, MAX_PATH, "Unable to read the Xming %s file.\n%s",
+		       file, (LPSTR)lpMsgBuf);
+      buffer[MAX_PATH] = '\0';
+      winMessageBoxF(buffer, MB_ICONERROR | MB_TOPMOST);
+      LocalFree (lpMsgBuf);
+      return;
+    }
+    CloseHandle(hFile);
+    snprintf (buffer, MAX_PATH, "%s %s", exe, file);
+  }
+  else
+    strncpy (buffer, exe, MAX_PATH);
+  buffer[MAX_PATH] = '\0';
+  memset (&start, 0, sizeof (start));
+  start.cb = sizeof (start);
+  start.dwFlags = STARTF_USESHOWWINDOW;
+  start.wShowWindow = wShowWindow;
+
+  memset (&child, 0, sizeof (child));
+
+  if (CreateProcess (NULL, buffer, NULL, NULL, FALSE, 0,
+                NULL, NULL, &start, &child))
+  {
+    CloseHandle (child.hThread);
+    CloseHandle (child.hProcess);
+  }
+  else
+  {
+    LPVOID lpMsgBuf;
+
+    FormatMessage (FORMAT_MESSAGE_ALLOCATE_BUFFER |
+		   FORMAT_MESSAGE_FROM_SYSTEM |
+		   FORMAT_MESSAGE_IGNORE_INSERTS,
+		   NULL,
+		   GetLastError (),
+		   MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
+		   (LPTSTR) &lpMsgBuf,
+		   0, NULL);
+    snprintf (buffer, MAX_PATH, "%s Command Error!\n%s %s\n%s",
+		      err, exe, (file)?file:"", (LPSTR)lpMsgBuf);
+    buffer[MAX_PATH] = '\0';
+    winMessageBoxF(buffer, MB_ICONEXCLAMATION);
+    LocalFree (lpMsgBuf);
+  }
+  return;
+}
