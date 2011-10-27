@@ -37,6 +37,7 @@
 /* Includes for authorization */
 #include "securitysrv.h"
 
+extern void XSetAuthorization (char *name, int namelen, char *data, int datalen);
 
 /*
  * Constants
