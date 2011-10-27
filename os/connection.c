@@ -67,6 +67,9 @@ SOFTWARE.
 
 #ifdef WIN32
 #include <X11/Xwinsock.h>
+#ifdef HAVE_XWIN_CONFIG_H
+#include <xwin-config.h>
+#endif
 #endif
 #include <X11/X.h>
 #include <X11/Xproto.h>
@@ -1015,7 +1018,11 @@ CheckConnections(void)
       {
         r = Select(curclient + 1, &tmask, NULL, NULL, &notime);
       }
-      while (r == SOCKET_ERROR && (WSAGetLastError() == WSAEINTR || WSAGetLastError() == WSAEWOULDBLOCK));
+      while (r == SOCKET_ERROR
+#ifdef HAS_WINSOCK
+      && (WSAGetLastError() == WSAEINTR || WSAGetLastError() == WSAEWOULDBLOCK)
+#endif
+      );
       if (r < 0)
         if (GetConnectionTranslation(curclient) > 0)
         {
