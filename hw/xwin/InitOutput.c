@@ -379,6 +379,22 @@ winDirectoryExists(const char * path)
   return ret;
 }
 
+static BOOL
+winFileIs(const char * path, mode_t mask)
+{
+  BOOL ret = FALSE;
+  if (access(path, 0) == 0)
+  {
+    struct stat pathstat;
+    stat(path, &pathstat);
+    if (pathstat.st_mode & mask)
+    {
+      ret = TRUE;
+    }
+  }
+  ErrorF("winFileExists(\"%s\") = %d\n", path, ret);
+  return ret;
+}
 
 const char *
 winGetBaseDir(void)
@@ -408,6 +424,46 @@ winGetBaseDir(void)
     inited = TRUE;
   }
   return buffer;
+}
+
+
+static void
+winVerifyEnvironment(const char * basedir, mode_t mask, const char * varname, const char * dirsuffix)
+{
+  if (getenv(varname) == NULL)
+  {
+    char buffer[MAX_PATH];
+    snprintf(buffer, sizeof(buffer), "%s\\%s",
+             PROJECTROOT, dirsuffix);
+    buffer[sizeof(buffer) - 1] = 0;
+    if (winFileIs(buffer, mask))
+    {
+      snprintf(buffer, sizeof(buffer), "%s=%s\\%s",
+               varname, PROJECTROOT, dirsuffix);
+      buffer[sizeof(buffer) - 1] = 0;
+      putenv(buffer);
+    }
+    else
+    {
+      snprintf(buffer, sizeof(buffer), "%s\\%s",
+               basedir, dirsuffix);
+      buffer[sizeof(buffer) - 1] = 0;
+      if (winFileIs(buffer, mask))
+      {
+        snprintf(buffer, sizeof(buffer), "%s=%s\\%s",
+                 varname, basedir, dirsuffix);
+        buffer[sizeof(buffer) - 1] = 0;
+        putenv(buffer);
+      }
+      else
+      {
+        ErrorF("winVerifyEnvironment: Could not find a valid path for \"%s\"\n", varname);
+      }
+    }
+
+    putenv(buffer);
+  }
+
 }
 #endif
 
@@ -600,72 +656,60 @@ winFixupPaths (void)
         winMsg (font_from, "FontPath set to \"%s\"\n", defaultFontPath);
 
 #ifdef RELOCATE_PROJECTROOT
-    if (getenv("XKEYSYMDB") == NULL)
-    {
-        char buffer[MAX_PATH];
-        snprintf(buffer, sizeof(buffer), "XKEYSYMDB=%s\\XKeysymDB",
-                basedir);
-        buffer[sizeof(buffer)-1] = 0;
-        putenv(buffer);
-    }
-    if (getenv("XERRORDB") == NULL)
-    {
-        char buffer[MAX_PATH];
-        snprintf(buffer, sizeof(buffer), "XERRORDB=%s\\XErrorDB",
-                basedir);
-        buffer[sizeof(buffer)-1] = 0;
-        putenv(buffer);
-    }
-    if (getenv("XLOCALEDIR") == NULL)
-    {
-        char buffer[MAX_PATH];
-        snprintf(buffer, sizeof(buffer), "XLOCALEDIR=%s\\locale",
-                basedir);
-        buffer[sizeof(buffer)-1] = 0;
-        putenv(buffer);
-    }
-    if (getenv("HOME") == NULL)
-    {
-        HMODULE shfolder;
-        SHGETFOLDERPATHPROC shgetfolderpath = NULL;
-        char buffer[MAX_PATH + 5];
-        strncpy(buffer, "HOME=", 5);
+  winVerifyEnvironment(basedir, S_IFREG, "XKEYSYMDB", "XKeysymDB");
+  winVerifyEnvironment(basedir, S_IFREG, "XERRORDB", "XErrorDB");
+  winVerifyEnvironment(basedir, S_IFDIR, "XLOCALEDIR", "locale");
+  if (getenv("HOME") == NULL)
+  {
+    HMODULE shfolder;
+    SHGETFOLDERPATHPROC shgetfolderpath = NULL;
+    char buffer[MAX_PATH + 5];
+    strncpy(buffer, "HOME=", 5);
 
-        /* Try to load SHGetFolderPath from shfolder.dll and shell32.dll */
-        
-        shfolder = LoadLibrary("shfolder.dll");
-        /* fallback to shell32.dll */
-        if (shfolder == NULL)
-            shfolder = LoadLibrary("shell32.dll");
+    /* Try to load SHGetFolderPath from shfolder.dll and shell32.dll */
 
-        /* resolve SHGetFolderPath */
-        if (shfolder != NULL)
-            shgetfolderpath = (SHGETFOLDERPATHPROC)GetProcAddress(shfolder, "SHGetFolderPathA");
-
-        /* query appdata directory */
-        if (shgetfolderpath &&
-                shgetfolderpath(NULL, CSIDL_APPDATA|CSIDL_FLAG_CREATE, NULL, 0, 
-                    buffer + 5) == 0)
-        { 
-            putenv(buffer);
-        } else
-        {
-            winMsg (X_ERROR, "Can not determine HOME directory\n");
-        } 
-        if (shfolder != NULL)
-            FreeLibrary(shfolder);
+    shfolder = LoadLibrary("shfolder.dll");
+    /* fallback to shell32.dll */
+    if (shfolder == NULL)
+    {
+      shfolder = LoadLibrary("shell32.dll");
     }
-    if (!g_fLogFileChanged) {
-        static char buffer[MAX_PATH];
-        DWORD size = GetTempPath(sizeof(buffer), buffer);
-        if (size && size < sizeof(buffer))
-        {
-            snprintf(buffer + size, sizeof(buffer) - size, 
-                    "XWin.%s.log", display); 
-            buffer[sizeof(buffer)-1] = 0;
-            g_pszLogFile = buffer;
-            winMsg (X_DEFAULT, "Logfile set to \"%s\"\n", g_pszLogFile);
-        }
+
+    /* resolve SHGetFolderPath */
+    if (shfolder != NULL)
+    {
+      shgetfolderpath = (SHGETFOLDERPATHPROC) GetProcAddress(shfolder, "SHGetFolderPathA");
+    }
+
+    /* query appdata directory */
+    if (shgetfolderpath &&
+        shgetfolderpath(NULL, CSIDL_APPDATA | CSIDL_FLAG_CREATE, NULL, 0,
+                        buffer + 5) == 0)
+    {
+      putenv(buffer);
+    }
+    else
+    {
+      winMsg(X_ERROR, "Can not determine HOME directory\n");
+    }
+    if (shfolder != NULL)
+    {
+      FreeLibrary(shfolder);
+    }
+  }
+  if (!g_fLogFileChanged)
+  {
+    static char buffer[MAX_PATH];
+    DWORD size = GetTempPath(sizeof(buffer), buffer);
+    if (size && size < sizeof(buffer))
+    {
+      snprintf(buffer + size, sizeof(buffer) - size,
+               "XWin.%s.log", display);
+      buffer[sizeof(buffer) - 1] = 0;
+      g_pszLogFile = buffer;
+      winMsg(X_DEFAULT, "Logfile set to \"%s\"\n", g_pszLogFile);
+    }
+  }
   {
     static char xkbbasedir[MAX_PATH];
 
