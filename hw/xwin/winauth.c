@@ -185,8 +185,7 @@ winGenerateAuthorization (void)
   return TRUE;
 
  auth_bailout:
-  if (fFreeAuth)
-    free(pAuth);
+  free(pAuth);
   
   return FALSE;
 }
