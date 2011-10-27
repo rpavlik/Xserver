@@ -1065,7 +1065,7 @@ InitOutput (ScreenInfo *screenInfo, int argc, char *argv[])
   winDetectSupportedEngines ();
 
   /* Store the instance handle */
-  g_hInstance = GetModuleHandle (NULL);
+  if (!g_hInstance) g_hInstance = GetModuleHandle (NULL);
 
   /* Initialize each screen */
   for (i = 0; i < g_iNumScreens; ++i)
