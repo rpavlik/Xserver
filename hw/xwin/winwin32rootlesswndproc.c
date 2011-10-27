@@ -1116,22 +1116,6 @@ winMWExtWMWindowProc (HWND hwnd, UINT message,
 	      winDebug ("\tmove\n");
 #endif
 	      if (winIsInternalWMRunning(pScreenInfo))
-                winAdjustXWindow (pWin, hwnd);
-
-	      winMWExtWMMoveResizeXWindow (pWin,
-					   rcClient.left - wBorderWidth (pWin)
-					   - GetSystemMetrics (SM_XVIRTUALSCREEN),
-					   rcClient.top - wBorderWidth (pWin)
-					   - GetSystemMetrics (SM_YVIRTUALSCREEN),
-					   rcClient.right - rcClient.left
-					   - wBorderWidth (pWin)*2,
-					   rcClient.bottom - rcClient.top
-					   - wBorderWidth (pWin)*2);
-	    } else if (!(pWinPos->flags & SWP_NOMOVE)) {
-#if CYGMULTIWINDOW_DEBUG
-	      winDebug ("\tmove\n");
-#endif
-	      if (winIsInternalWMRunning(pScreenInfo))
                 winAdjustXWindow (pWin, hwnd); 
 
 	      winMWExtWMMoveXWindow (pWin,
