@@ -1130,7 +1130,7 @@ winCheckDisplayNumber (void)
 
   /* Check display range */
   nDisp = atoi (display);
-  if (nDisp < 0 || nDisp > 65535)
+  if (nDisp < 0 || nDisp > 59535)
     {
       ErrorF ("winCheckDisplayNumber - Bad display number: %d\n", nDisp);
       return FALSE;
