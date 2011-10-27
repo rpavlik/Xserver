@@ -37,6 +37,9 @@ from The Open Group.
 #include "winmsg.h"
 #include "winmonitors.h"
 
+#include <ft2build.h>
+#include FT_FREETYPE_H
+
 /*
  * References to external symbols
  */
