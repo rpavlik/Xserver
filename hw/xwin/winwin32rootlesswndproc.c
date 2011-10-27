@@ -837,9 +837,8 @@ winMWExtWMWindowProc (HWND hwnd, UINT message,
 #endif
 	      /* Tell our Window Manager thread to activate the window */
 	      wmMsg.msg = WM_WM_ACTIVATE;
-	      if (fWMMsgInitialized)
-		if (!pWin || !pWin->overrideRedirect) /* for OOo menus */
-		  winSendMessageToWM (pScreenPriv->pWMInfo, &wmMsg);
+	      if (fWMMsgInitialized && pWin->realized && !pWin->overrideRedirect) /* for OOo menus */
+		winSendMessageToWM (pScreenPriv->pWMInfo, &wmMsg);
 	    }
 	  winWindowsWMSendEvent(WindowsWMControllerNotify,
 				WindowsWMControllerNotifyMask,
