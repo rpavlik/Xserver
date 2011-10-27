@@ -195,6 +195,7 @@ winGenerateAuthorization (void)
 void
 winSetAuthorization(void)
 {
+  if (g_pAuthData)
   XSetAuthorization (AUTH_NAME,
 		     strlen (AUTH_NAME),
 		     g_pAuthData,
