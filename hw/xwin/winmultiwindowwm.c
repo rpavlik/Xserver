@@ -62,6 +62,7 @@
 #include "window.h"
 #include "pixmapstr.h"
 #include "windowstr.h"
+#include "dixstruct.h"
 
 #ifdef XWIN_MULTIWINDOWEXTWM
 #include <X11/extensions/windowswmstr.h>
