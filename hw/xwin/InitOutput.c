@@ -49,6 +49,9 @@ from The Open Group.
 #endif
 #ifdef RELOCATE_PROJECTROOT
 #include <shlobj.h>
+#include <io.h>
+#include <sys/stat.h>
+
 typedef WINAPI HRESULT (*SHGETFOLDERPATHPROC)(
     HWND hwndOwner,
     int nFolder,
@@ -358,7 +361,26 @@ winCheckMount(void)
 #endif
 
 #ifdef RELOCATE_PROJECTROOT
-const char * 
+
+static BOOL
+winDirectoryExists(const char * path)
+{
+  BOOL ret = FALSE;
+  if (access(path, 0) == 0)
+  {
+    struct stat pathstat;
+    stat(path, &pathstat);
+    if (pathstat.st_mode & S_IFDIR)
+    {
+      ret = TRUE;
+    }
+  }
+  ErrorF("winDirectoryExists(\"%s\") = %d\n", path, ret);
+  return ret;
+}
+
+
+const char *
 winGetBaseDir(void)
 {
     static BOOL inited = FALSE;
@@ -642,16 +664,20 @@ winFixupPaths (void)
             g_pszLogFile = buffer;
             winMsg (X_DEFAULT, "Logfile set to \"%s\"\n", g_pszLogFile);
         }
-    }
-    {
-        static char xkbbasedir[MAX_PATH];
+  {
+    static char xkbbasedir[MAX_PATH];
 
-        snprintf(xkbbasedir, sizeof(xkbbasedir), "%s\\xkb", basedir);
-        if (sizeof(xkbbasedir) > 0)
-            xkbbasedir[sizeof(xkbbasedir)-1] = 0;
-        XkbBaseDirectory = xkbbasedir;
-	XkbBinDirectory = basedir;
+    snprintf(xkbbasedir, sizeof(xkbbasedir), "%s\\xkb", basedir);
+    if (sizeof(xkbbasedir) > 0)
+    {
+      xkbbasedir[sizeof(xkbbasedir) - 1] = 0;
     }
+    if (winDirectoryExists(xkbbasedir))
+    {
+      XkbBaseDirectory = xkbbasedir;
+    }
+    XkbBinDirectory = basedir;
+  }
 #endif /* RELOCATE_PROJECTROOT */
 }
 
