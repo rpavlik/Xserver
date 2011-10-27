@@ -720,6 +720,9 @@ OsVendorInit (void)
   /* Re-initialize global variables on server reset */
   winInitializeGlobals ();
 
+  LogInit (NULL, NULL);
+  LogSetParameter (XLOG_VERBOSITY, g_iLogVerbose);
+
   winFixupPaths();
 
 #ifdef DDXOSVERRORF
