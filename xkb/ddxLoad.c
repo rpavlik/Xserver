@@ -232,7 +232,7 @@ XkbDDXCompileKeymapByNames(	XkbDescPtr		xkb,
 		 PRE_ERROR_MSG, ERROR_PREFIX, POST_ERROR_MSG1,
 		 xkm_output_dir, keymap) == -1)
 	buf = NULL;
-
+	DebugF("[xkb] xkb buf: %s\n",buf);
     free(xkbbasedirflag);
 
     if (!buf) {
