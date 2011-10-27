@@ -511,7 +511,7 @@ ProcWindowsWMFrameSetTitle(ClientPtr client)
 #endif
 
   title_bytes = malloc (title_length+1);
-  strncpy (title_bytes, (unsigned char *) &stuff[1], title_length);
+  strncpy (title_bytes, (char *) &stuff[1], title_length);
   title_bytes[title_length] = '\0';
 
   pRLWinPriv = (win32RootlessWindowPtr) RootlessFrameForWindow (pWin, FALSE);
@@ -523,7 +523,7 @@ ProcWindowsWMFrameSetTitle(ClientPtr client)
     }
     
   /* Flush the window style */
-  SetWindowText (pRLWinPriv->hWnd, title_bytes);
+  SetWindowText (pRLWinPriv->hWnd, (LPCTSTR) title_bytes);
 
   free (title_bytes);
 
