@@ -859,6 +859,8 @@ winDisplayDepthChangeDialog (winPrivScreenPtr pScreenPriv);
 void
 winDisplayAboutDialog (winPrivScreenPtr pScreenPriv);
 
+void
+winCreateProcess (const char* exe, const char* file, const char* err, DWORD wShowWindow);
 
 /*
  * winengine.c
