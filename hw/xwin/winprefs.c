@@ -369,27 +369,7 @@ HandleCustomWM_COMMAND (unsigned long hwndIn,
 		  break;
 #else
 		case CMD_EXEC:
-                  {
-		    /* Start process without console window */
-		    STARTUPINFO start;
-		    PROCESS_INFORMATION child;
-
-		    memset (&start, 0, sizeof (start));
-		    start.cb = sizeof (start);
-		    start.dwFlags = STARTF_USESHOWWINDOW;
-		    start.wShowWindow = SW_HIDE;
-
-		    memset (&child, 0, sizeof (child));
-
-		    if (CreateProcess (NULL, m->menuItem[j].param, NULL, NULL, FALSE, 0,
-				       NULL, NULL, &start, &child))
-		    {
-			CloseHandle (child.hThread);
-			CloseHandle (child.hProcess);
-		    }
-		    else
-			MessageBox(NULL, m->menuItem[j].param, "Mingrc Exec Command Error!", MB_OK | MB_ICONEXCLAMATION);
-                  }
+		  winCreateProcess (m->menuItem[j].param, NULL, "Xmingrc Exec", SW_HIDE);
 		  return TRUE;
 #endif
 		case CMD_ALWAYSONTOP:
