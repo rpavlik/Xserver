@@ -32,7 +32,12 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define BASE_SIZE 16
 #define CORE "X11"
+#ifdef __MINGW32__
+#define FILENAME "protocol.txt"
+extern const char *winGetBaseDir(void);
+#else
 #define FILENAME SERVER_MISC_CONFIG_PATH "/protocol.txt"
+#endif
 
 #define PROT_COMMENT '#'
 #define PROT_REQUEST 'R'
@@ -311,7 +316,16 @@ dixResetRegistry(void)
     /* Open the protocol file */
     if (fh)
 	fclose(fh);
+#ifdef __MINGW32__
+    {
+	char filename[MAX_PATH];
+	snprintf(filename, sizeof(filename), "%s\\%s", winGetBaseDir(), FILENAME);
+	filename[sizeof(filename)-1] = 0;
+	fh = fopen(filename, "r");
+    }
+#else
     fh = fopen(FILENAME, "r");
+#endif
     if (!fh)
 	LogMessage(X_WARNING, "Failed to open protocol names file " FILENAME "\n");
 
