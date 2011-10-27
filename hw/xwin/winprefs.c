@@ -106,7 +106,7 @@ MakeMenu (char *name,
       if (!hmenu)
 	{
 	  ErrorF("MakeMenu: Unable to CreatePopupMenu() %s\n", name);
-	  return NULL;
+	  exit (1);
 	}
       item = 0;
     }
