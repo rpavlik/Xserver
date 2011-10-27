@@ -86,6 +86,7 @@ SRCS =	InitInput.c \
 	winglobals.c \
 	winkeybd.c \
 	winkeyhook.c \
+	winlocalename.c \
 	winmisc.c \
 	winmonitors.c \
 	winmouse.c \

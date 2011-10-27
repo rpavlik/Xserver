@@ -1086,6 +1086,17 @@ InitOutput (ScreenInfo *screenInfo, int argc, char *argv[])
   /* Perform some one time initialization */
   if (1 == serverGeneration)
     {
+#ifdef __MINGW32__
+      if (getenv("LANG") == NULL)
+	{
+	  char buffer[MAX_PATH];
+	  snprintf(buffer, sizeof(buffer), "LANG=%s",
+		   (char *)localename());
+	  buffer[sizeof(buffer)-1] = 0;
+	  putenv(buffer);
+	  ErrorF ("Setting %s\n", buffer);
+	}
+#endif
       /*
        * setlocale applies to all threads in the current process.
        * Apply locale specified in LANG environment variable.
