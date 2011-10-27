@@ -762,8 +762,35 @@ OsVendorInit (void)
       /* We have to flag this as an explicit screen, even though it isn't */
       g_ScreenInfo[0].fExplicitScreen = TRUE;
     }
-}
 
+  /* Work out what the default emulate3buttons setting should be, and apply
+     it if nothing was explicitly specified */
+  {
+    int mouseButtons = GetSystemMetrics(SM_CMOUSEBUTTONS);
+    int j;
+
+    for (j = 0; j < g_iNumScreens; j++)
+      {
+        if (g_ScreenInfo[j].iE3BTimeout == WIN_E3B_DEFAULT)
+          {
+            if (mouseButtons < 3)
+              {
+                static Bool reportOnce = TRUE;
+                g_ScreenInfo[j].iE3BTimeout = WIN_DEFAULT_E3B_TIME;
+                if (reportOnce)
+                  {
+                    reportOnce = FALSE;
+                    winMsg(X_PROBED, "Windows reports only %d mouse buttons, defaulting to -emulate3buttons\n", mouseButtons);
+                  }
+              }
+            else
+              {
+                g_ScreenInfo[j].iE3BTimeout = WIN_E3B_OFF;
+              }
+          }
+      }
+  }
+}
 
 static void
 winUseMsg (void)
