@@ -78,7 +78,7 @@ static void OpenSysMenu(void);
 static void AddSysMenuLine(char *matchstr, char *menuname, int pos);
 static void CloseSysMenu(void);
 
-static int yyerror (char *s);
+static int yyerror (const char *s);
 
 extern void ErrorF (const char* /*f*/, ...);
 extern char *yytext;
@@ -252,7 +252,7 @@ debug: 	DEBUGOUTPUT STRING NEWLINE { ErrorF("LoadPreferences: %s\n", $2); free($
  * Errors in parsing abort and print log messages
  */
 static int
-yyerror (char *s) 
+yyerror (const char *s) 
 {
   extern int yylineno; /* Handled by flex internally */
 
