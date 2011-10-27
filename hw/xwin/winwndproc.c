@@ -1255,6 +1255,9 @@ winWindowProc (HWND hwnd, UINT message,
 
     case WM_ENDSESSION:
     case WM_GIVEUP:
+      /* Delete the tray Icon */
+      if (!s_pScreenInfo->fNoTrayIcon && s_pScreenPriv->hiconNotifyIcon != NULL)
+        winDeleteNotifyIcon (s_pScreenPriv);
       /* Tell X that we are giving up */
 #ifdef XWIN_MULTIWINDOW
       if (s_pScreenInfo->fMultiWindow)
