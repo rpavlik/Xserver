@@ -161,7 +161,6 @@ winDeinitMultiWindowWM (void);
 void
 winMinimizeWindow (Window id);
 
-
 /*
  * winmultiwindowicons.c
  */

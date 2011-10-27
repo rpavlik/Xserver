@@ -35,6 +35,7 @@ from The Open Group.
 #include "winmsg.h"
 #include "winconfig.h"
 #include "winprefs.h"
+#include "glx/glwindows.h"
 #ifdef XWIN_CLIPBOARD
 #include "X11/Xlocale.h"
 #endif
