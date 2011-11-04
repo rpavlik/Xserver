@@ -64,6 +64,9 @@ __stdcall unsigned long GetTickCount(void);
 #endif
 
 #if defined(WIN32) && !defined(__CYGWIN__)
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0501
+#endif
 #include <X11/Xwinsock.h>
 #endif
 #include <X11/Xos.h>
