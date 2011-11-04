@@ -155,6 +155,7 @@ OsInit(void)
     char fname[PATH_MAX];
 
     if (!been_here) {
+#ifndef X_NO_POSIX
 	struct sigaction act, oact;
 	int i;
 	int siglist[] = { SIGSEGV, SIGQUIT, SIGILL, SIGFPE, SIGBUS,
@@ -198,6 +199,8 @@ OsInit(void)
 	int failure_signal = SIGQUIT;
 	dlinfo(RTLD_SELF, RTLD_DI_SETSIGNAL, &failure_signal);
 #endif
+
+#endif /* !X_NO_POSIX */
 
 #if !defined(__CYGWIN__) 
 	fclose(stdin);
