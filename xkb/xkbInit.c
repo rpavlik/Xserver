@@ -685,7 +685,7 @@ XkbProcessArguments(int argc,char *argv[],int i)
 {
     if (strncmp(argv[i], "-xkbdir", 7) == 0) {
 	if(++i < argc) {
-#if !defined(WIN32) && !defined(__CYGWIN__)
+#ifndef IS_WIN32_NATIVE_OR_CYGWIN
 	    if (getuid() != geteuid()) {
 		LogMessage(X_WARNING, "-xkbdir is not available for setuid X servers\n");
 		return -1;
