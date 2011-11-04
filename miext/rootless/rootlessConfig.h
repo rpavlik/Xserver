@@ -48,7 +48,7 @@
 
 #endif /* __APPLE__ */
 
-#if defined(__CYGWIN__) || defined(WIN32)
+#ifdef IS_WIN32_NATIVE_OR_CYGWIN
 
 # define ROOTLESS_PROTECT_ALPHA NO
 # define ROOTLESS_REDISPLAY_DELAY 10
@@ -57,6 +57,6 @@
 
 # define RootlessAlphaMask(bpp) ((bpp) == 32 ? 0xFF000000 : 0)
 
-#endif /* __CYGWIN__ */
+#endif /* IS_WIN32_NATIVE_OR_CYGWIN */
 
 #endif /* _ROOTLESSCONFIG_H */
