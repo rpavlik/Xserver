@@ -45,8 +45,15 @@
 
 /* Constant strings */
 #ifndef PROJECT_NAME
-#  define PROJECT_NAME		"Cygwin/X"
+#  if defined(__MINGW32__)
+#    define PROJECT_NAME "XWin-MinGW"
+#  elif defined(__CYGWIN__)
+#    define PROJECT_NAME		"Cygwin/X"
+#  else
+#    define PROJECT_NAME		"XWin"
+#  endif
 #endif
+
 #define EXECUTABLE_NAME         "XWin"
 #define WINDOW_CLASS		PROJECT_NAME
 #define WINDOW_TITLE		PROJECT_NAME ":%s.%d"
