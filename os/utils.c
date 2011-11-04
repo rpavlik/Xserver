@@ -63,20 +63,22 @@ OR PERFORMANCE OF THIS SOFTWARE.
 __stdcall unsigned long GetTickCount(void);
 #endif
 
-#if defined(WIN32) && !defined(__CYGWIN__)
-#ifndef _WIN32_WINNT
-#define _WIN32_WINNT 0x0501
-#endif
-#include <X11/Xwinsock.h>
+#ifdef IS_WIN32_NATIVE
+# ifndef _WIN32_WINNT
+#  define _WIN32_WINNT 0x0501
+# endif
+# include <X11/Xwinsock.h>
 #endif
 #include <X11/Xos.h>
 #include <stdio.h>
 #include <time.h>
-#if !defined(WIN32) || !defined(__MINGW32__)
-#include <sys/time.h>
-#include <sys/resource.h>
+#ifndef IS_WIN32_NATIVE
 # define HAVE_SMARTSCHEDULE
+
+# include <sys/time.h>
+# include <sys/resource.h>
 #endif
+
 #include "misc.h"
 #include <X11/X.h>
 #define XSERV_t
@@ -420,7 +422,7 @@ GiveUp(int sig)
     errno = olderrno;
 }
 
-#if defined(WIN32) || defined(__CYGWIN__)
+#ifdef IS_WIN32_NATIVE_OR_CYGWIN
 CARD32
 GetTimeInMillis (void)
 {
