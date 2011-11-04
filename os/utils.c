@@ -75,6 +75,7 @@ __stdcall unsigned long GetTickCount(void);
 #if !defined(WIN32) || !defined(__MINGW32__)
 #include <sys/time.h>
 #include <sys/resource.h>
+# define HAVE_SMARTSCHEDULE
 #endif
 #include "misc.h"
 #include <X11/X.h>
@@ -907,10 +908,12 @@ ProcessCommandLine(int argc, char *argv[])
 	    i = skip - 1;
 	}
 #endif
+#ifdef HAVE_SMARTSCHEDULE
 	else if ( strcmp( argv[i], "-dumbSched") == 0)
 	{
 	    SmartScheduleDisable = TRUE;
 	}
+#endif
 	else if ( strcmp( argv[i], "-schedInterval") == 0)
 	{
 	    if (++i < argc)
@@ -1145,6 +1148,7 @@ XNFstrdup(const char *s)
 void
 SmartScheduleStopTimer (void)
 {
+#ifdef HAVE_SMARTSCHEDULE
     struct itimerval	timer;
     
     if (SmartScheduleDisable)
@@ -1154,11 +1158,13 @@ SmartScheduleStopTimer (void)
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_usec = 0;
     (void) setitimer (ITIMER_REAL, &timer, 0);
+#endif
 }
 
 void
 SmartScheduleStartTimer (void)
 {
+#ifdef HAVE_SMARTSCHEDULE
     struct itimerval	timer;
     
     if (SmartScheduleDisable)
@@ -1168,6 +1174,7 @@ SmartScheduleStartTimer (void)
     timer.it_value.tv_sec = 0;
     timer.it_value.tv_usec = SmartScheduleInterval * 1000;
     setitimer (ITIMER_REAL, &timer, 0);
+#endif
 }
 
 static void
@@ -1179,6 +1186,7 @@ SmartScheduleTimer (int sig)
 void
 SmartScheduleInit (void)
 {
+#ifdef HAVE_SMARTSCHEDULE
     struct sigaction	act;
 
     if (SmartScheduleDisable)
@@ -1195,6 +1203,7 @@ SmartScheduleInit (void)
 	perror ("sigaction for smart scheduler");
 	SmartScheduleDisable = TRUE;
     }
+#endif
 }
 
 #ifdef SIG_BLOCK
