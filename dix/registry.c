@@ -34,7 +34,7 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #define CORE "X11"
 
 /* Should this actually be checking RELOCATE_PROJECTROOT ? */
-#if defined(WIN32) && !defined(__CYGWIN__)
+#ifdef IS_WIN32_NATIVE
 #define FILENAME_ONLY "protocol.txt"
 extern const char *winGetBaseDir(void);
 #endif
@@ -324,7 +324,7 @@ dixResetRegistry(void)
     /* Open the protocol file */
     if (fh)
 	fclose(fh);
-#if defined(WIN32) && !defined(__CYGWIN__)
+#ifdef IS_WIN32_NATIVE
     {
 	char filename[MAX_PATH];
 	snprintf(filename, sizeof(filename), "%s\\%s", winGetBaseDir(), FILENAME_ONLY);
@@ -334,7 +334,7 @@ dixResetRegistry(void)
     if (!fh) {
 #endif
     fh = fopen(FILENAME, "r");
-#if defined(WIN32) && !defined(__CYGWIN__)
+#ifdef IS_WIN32_NATIVE
 	}
 #endif
     if (!fh)
