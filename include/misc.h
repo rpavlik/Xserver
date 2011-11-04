@@ -81,6 +81,25 @@ OF THIS SOFTWARE.
 #include <stddef.h>
 #include <stdint.h>
 
+
+/* Simplified definitions describing varieties of Win32-ness */
+#if defined(__CYGWIN__)
+#define IS_WIN32_CYGWIN
+#undef IS_WIN32_NATIVE
+#define IS_WIN32_NATIVE_OR_CYGWIN
+
+#elif defined(WIN32)
+#undef IS_WIN32_CYGWIN
+#define IS_WIN32_NATIVE
+#define IS_WIN32_NATIVE_OR_CYGWIN
+
+#else
+#undef IS_WIN32_CYGWIN
+#undef IS_WIN32_NATIVE
+#undef IS_WIN32_NATIVE_OR_CYGWIN
+#endif
+
+
 #ifndef MAXSCREENS
 #define MAXSCREENS	16
 #endif
