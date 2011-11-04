@@ -419,7 +419,7 @@ GiveUp(int sig)
     errno = olderrno;
 }
 
-#if (defined WIN32 && defined __MINGW32__) || defined(__CYGWIN__)
+#if defined(WIN32) || defined(__CYGWIN__)
 CARD32
 GetTimeInMillis (void)
 {
