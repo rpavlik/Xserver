@@ -53,6 +53,8 @@ OR PERFORMANCE OF THIS SOFTWARE.
 #include <dix-config.h>
 #endif
 
+#include <misc.h>
+
 #ifdef __CYGWIN__
 #include <stdlib.h>
 #include <signal.h>
