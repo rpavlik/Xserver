@@ -19,6 +19,8 @@
 
 #ifdef WIN32
 #include <X11/Xwinsock.h>
+#define XSERV_t
+#include <X11/Xtrans/Xtrans.h>
 #endif
 
 #include <X11/Xos.h>
