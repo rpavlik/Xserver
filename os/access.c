@@ -874,7 +874,7 @@ ResetHosts (char *display)
         FreeHost (host);
     }
 
-#if defined WIN32 && defined __MINGW32__
+#if defined(WIN32)&& !defined(__CYGWIN__)
 #define ETC_HOST_PREFIX "X"
 #else
 #define ETC_HOST_PREFIX "/etc/X"
