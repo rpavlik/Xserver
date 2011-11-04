@@ -32,7 +32,14 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 #define BASE_SIZE 16
 #define CORE "X11"
+
+/* Should this actually be checking RELOCATE_PROJECTROOT ? */
+#if defined(WIN32) && !defined(__CYGWIN__)
+#define FILENAME_ONLY "protocol.txt"
+extern const char *winGetBaseDir(void);
+#endif
 #define FILENAME SERVER_MISC_CONFIG_PATH "/protocol.txt"
+
 
 #define PROT_COMMENT '#'
 #define PROT_REQUEST 'R'
@@ -311,7 +318,19 @@ dixResetRegistry(void)
     /* Open the protocol file */
     if (fh)
 	fclose(fh);
+#if defined(WIN32) && !defined(__CYGWIN__)
+    {
+	char filename[MAX_PATH];
+	snprintf(filename, sizeof(filename), "%s\\%s", winGetBaseDir(), FILENAME_ONLY);
+	filename[sizeof(filename)-1] = 0;
+	fh = fopen(filename, "r");
+    }
+    if (!fh) {
+#endif
     fh = fopen(FILENAME, "r");
+#if defined(WIN32) && !defined(__CYGWIN__)
+	}
+#endif
     if (!fh)
 	LogMessage(X_WARNING, "Failed to open protocol names file " FILENAME "\n");
 
